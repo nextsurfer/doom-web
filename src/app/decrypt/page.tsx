@@ -139,7 +139,7 @@ export default function Home() {
       return;
     }
     let nonce = randomBytes(24);
-    let chacha = xchacha20poly1305(Buffer.from(answerHash), nonce);
+    let chacha = xchacha20poly1305(Buffer.from(answerHash.slice(0, 32)), nonce);
     setUserPassword(
       chacha.decrypt(Buffer.from(encryptedPassword, "base64")).toString()
     );

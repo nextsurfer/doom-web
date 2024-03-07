@@ -108,7 +108,7 @@ export default function Home() {
       answer1.toLowerCase() + answer2.toLowerCase() + answer3.toLowerCase()
     ).toString("hex");
     let nonce = randomBytes(24);
-    let chacha = xchacha20poly1305(Buffer.from(answerHash), nonce);
+    let chacha = xchacha20poly1305(Buffer.from(answerHash.slice(0, 32)), nonce);
     let encryptedPassword = Buffer.from(
       chacha.encrypt(Buffer.from(userPassword))
     ).toString("base64");
