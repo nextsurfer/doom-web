@@ -9,9 +9,7 @@ import MuiAlert, { AlertProps } from "@mui/material/Alert";
 import { request, IncomingMessage, RequestOptions } from "http";
 import shared from "../shared";
 import keccak256 from "keccak256";
-import { xchacha20poly1305 } from "@noble/ciphers/chacha";
-import { randomBytes } from "@noble/ciphers/webcrypto";
-import { encrypt, decrypt } from "eciesjs";
+import { XChaCha20Poly1305 } from "@stablelib/xchacha20poly1305";
 
 const Alert = React.forwardRef<HTMLDivElement, AlertProps>(function Alert(
   props,
@@ -90,6 +88,7 @@ export default function Home() {
   const [plaintext, setPlaintext] = React.useState("");
   const [encryptedPassword, setEncryptedPassword] = React.useState("");
   const [hashOfHash, setHashOfHash] = React.useState("");
+  const [nonce, setNonce] = React.useState("");
 
   const doCommit = () => {
     if (!plaintext) {
@@ -102,7 +101,8 @@ export default function Home() {
       !plaintextObj.question2 ||
       !plaintextObj.question3 ||
       !plaintextObj.encryptedPassword ||
-      !plaintextObj.hashOfHash
+      !plaintextObj.hashOfHash ||
+      !plaintextObj.nonce
     ) {
       setErrorToast("invalid plaintext");
       return;
@@ -113,6 +113,7 @@ export default function Home() {
     setQuestion3(plaintextObj.question3);
     setEncryptedPassword(plaintextObj.encryptedPassword);
     setHashOfHash(plaintextObj.hashOfHash);
+    setNonce(plaintextObj.nonce);
   };
 
   const [invalidPlaintext, setInvalidPlaintext] = React.useState(false);
@@ -124,8 +125,7 @@ export default function Home() {
       !question2 ||
       !answer2 ||
       !question3 ||
-      !answer3 ||
-      !userPassword
+      !answer3
     ) {
       setErrorToast("have empty question or answer");
       return;
@@ -138,11 +138,19 @@ export default function Home() {
       setErrorToast("hashOfHashs not equal");
       return;
     }
-    let nonce = randomBytes(24);
-    let chacha = xchacha20poly1305(Buffer.from(answerHash.slice(0, 32)), nonce);
-    setUserPassword(
-      chacha.decrypt(Buffer.from(encryptedPassword, "base64")).toString()
+    let aead = new XChaCha20Poly1305(
+      new Uint8Array(Buffer.from(answerHash, "utf-8")).slice(0, 32)
     );
+    let password = aead.open(
+      Buffer.from(nonce, "base64"),
+      Buffer.from(encryptedPassword, "base64")
+    );
+    if (password) {
+      setUserPassword(Buffer.from(password).toString());
+    } else {
+      setErrorToast("decrypt password fail");
+      return;
+    }
   };
 
   useEffect(() => {

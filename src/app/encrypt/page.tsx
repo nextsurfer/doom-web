@@ -9,9 +9,9 @@ import MuiAlert, { AlertProps } from "@mui/material/Alert";
 import { request, IncomingMessage, RequestOptions } from "http";
 import shared from "../shared";
 import keccak256 from "keccak256";
-import { xchacha20poly1305 } from "@noble/ciphers/chacha";
-import { randomBytes } from "@noble/ciphers/webcrypto";
 import { encrypt } from "eciesjs";
+import { XChaCha20Poly1305 } from "@stablelib/xchacha20poly1305";
+import { randomBytes } from "@stablelib/random";
 
 const Alert = React.forwardRef<HTMLDivElement, AlertProps>(function Alert(
   props,
@@ -108,9 +108,11 @@ export default function Home() {
       answer1.toLowerCase() + answer2.toLowerCase() + answer3.toLowerCase()
     ).toString("hex");
     let nonce = randomBytes(24);
-    let chacha = xchacha20poly1305(Buffer.from(answerHash.slice(0, 32)), nonce);
+    let aead = new XChaCha20Poly1305(
+      new Uint8Array(Buffer.from(answerHash, "utf-8")).slice(0, 32)
+    );
     let encryptedPassword = Buffer.from(
-      chacha.encrypt(Buffer.from(userPassword))
+      aead.seal(nonce, new Uint8Array(Buffer.from(userPassword, "utf-8")))
     ).toString("base64");
     let hashOfHash = keccak256(answerHash).toString("hex");
     let plaintext = JSON.stringify({
@@ -119,6 +121,7 @@ export default function Home() {
       question3,
       encryptedPassword,
       hashOfHash,
+      nonce: Buffer.from(nonce).toString("base64"),
     });
     setPlaintext(plaintext);
     let ciphertext = encrypt(
@@ -325,13 +328,37 @@ export default function Home() {
         </Stack>
         <Stack direction="row" textAlign="center" justifyContent="left">
           <Typography variant="subtitle2" gutterBottom>
-            Plaintext: {plaintext}
+            Plaintext:
           </Typography>
         </Stack>
         <Stack direction="row" textAlign="center" justifyContent="left">
+          <TextField
+            id="outlined-basic"
+            label="Plaintext"
+            variant="outlined"
+            fullWidth
+            multiline
+            rows={2}
+            value={plaintext}
+            disabled
+          />
+        </Stack>
+        <Stack direction="row" textAlign="center" justifyContent="left">
           <Typography variant="subtitle2" gutterBottom>
-            CipherText: {ciphertext}
+            CipherText:
           </Typography>
+        </Stack>
+        <Stack direction="row" textAlign="center" justifyContent="left">
+          <TextField
+            id="outlined-basic"
+            label="CipherText"
+            variant="outlined"
+            fullWidth
+            multiline
+            rows={2}
+            value={ciphertext}
+            disabled
+          />
         </Stack>
       </Stack>
       <Snackbar
