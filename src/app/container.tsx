@@ -25,6 +25,7 @@ import MuiAlert, { AlertProps } from "@mui/material/Alert";
 const LINKS = [
   { text: "Encrypt", href: "/encrypt" },
   { text: "Decrypt", href: "/decrypt" },
+  { text: "Simple Encrypt", href: "/simple-encrypt" },
 ];
 
 function Container({ children }: { children: React.ReactNode }) {
