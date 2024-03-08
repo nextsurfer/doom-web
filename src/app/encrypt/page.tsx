@@ -342,6 +342,16 @@ export default function Home() {
             value={plaintext}
             disabled
           />
+          <Button
+            variant="contained"
+            size="large"
+            sx={{ marginLeft: "20px" }}
+            onClick={() => {
+              navigator.clipboard.writeText(plaintext);
+            }}
+          >
+            Copy
+          </Button>
         </Stack>
         <Stack direction="row" textAlign="center" justifyContent="left">
           <Typography variant="subtitle2" gutterBottom>
@@ -359,6 +369,16 @@ export default function Home() {
             value={ciphertext}
             disabled
           />
+          <Button
+            variant="contained"
+            size="large"
+            onClick={() => {
+              navigator.clipboard.writeText(ciphertext);
+            }}
+            sx={{ marginLeft: "20px" }}
+          >
+            Copy
+          </Button>
         </Stack>
       </Stack>
       <Snackbar
