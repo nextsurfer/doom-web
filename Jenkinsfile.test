@@ -1,0 +1,79 @@
+pipeline {
+    agent {
+        label 'test'
+    }
+    stages {
+        stage('Pre') {
+            steps {
+                script {
+                    sh '''
+                        git remote update origin --prune
+                        git branch -a | grep -e '^  remotes/origin/dev$'
+                        echo 'remote dev branch exists'
+                        git branch -D dev || echo 'no local dev branch'
+                        git branch dev remotes/origin/dev
+                    '''
+                    sh """
+                        git checkout ${BRANCH_NAME}
+                        git rebase dev
+                        echo 'git rebase dev success'
+                        git push origin ${BRANCH_NAME}
+                        echo 'git push origin' ${BRANCH_NAME} 'success'
+                    """
+                }
+            }
+        }
+        stage('Build') {
+            steps {
+                sh """
+                    docker build \
+                        --build-arg env=test \
+                        -t nextsurfer/doom-web:latest \
+                        -f ./Dockerfile .
+                    docker stop doom-web && docker rm doom-web || echo 0
+                    docker run -d \
+                        --name doom-web \
+                        --dns ${HOST_IP} \
+                        --dns 8.8.8.8 \
+                        -p 10010:3000 \
+                        nextsurfer/doom-web:latest
+                """
+            }
+        }
+    }
+    post {
+        success {
+            sh """
+                echo 'build success'
+                if [ ${WHETHER_REBASE_TO_DEV} = 'true' ]; then
+                    git checkout dev
+                    git rebase ${BRANCH_NAME}
+                    git push origin dev
+                fi
+            """
+        }
+        failure {
+            sh """
+                echo 'feature build fail'
+                git checkout dev
+                docker build \
+                    --build-arg env=test \
+                    -t nextsurfer/doom-web:latest \
+                    -f ./Dockerfile .
+                docker stop doom-web && docker rm doom-web || echo 0
+                docker run -d \
+                    --name doom-web \
+                    --dns ${HOST_IP} \
+                    --dns 8.8.8.8 \
+                    -p 10010:3000 \
+                    nextsurfer/doom-web:latest
+            """
+        }
+        cleanup {
+            sh """
+                docker system prune -f
+            """
+            cleanWs()
+        }
+    }
+}
